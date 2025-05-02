@@ -8,9 +8,9 @@ A simple library for reading and extracting polygons from a GDSII layout databas
 
 # How to add the library to your project
 
-No dependencies except the standard library. Just copy the folder Gds with source files to your project.
+No dependencies except the standard library. Just copy the folder Gds with source files to your project and include the file `Gds.h` in source files using this library.
 
-# Instructions to use
+# Example use
 
 * An example of its use is given in the `Test.cpp` in the Test folder with further information on the use of each function.
 
