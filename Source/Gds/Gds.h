@@ -14,10 +14,10 @@
 
 class gds_db {
 public:
-	uint16_t version {};
+	uint16_t version{};
 
 	// The contents of the gds UNIT records
-	double dbunit_in_uu {}, dbunit_in_meter {};
+	double dbunit_in_uu{}, dbunit_in_meter{};
 
 	std::vector<gds_cell*> cell_list;
 
