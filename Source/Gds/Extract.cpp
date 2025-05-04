@@ -28,7 +28,9 @@ void add_poly(gds_polyset* pset, gds_pair* pairs, int npairs, uint16_t layer, gd
 
 	gds_polygon* poly = new gds_polygon(transformed_pairs, npairs, *box, layer);
 
-	pset->push_back(poly);
+	pset->add(poly);
+
+	delete[] transformed_pairs;
 }
 
 static

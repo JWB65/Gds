@@ -58,7 +58,6 @@ int main()
 	if (result != GDS_ERR_SUCCESS) {
 		printf("--> Error %d found while extracting polygons\n", result);
 
-		gds_polyset_clear(pset);
 		delete pset;
 		pset = NULL;
 	}
@@ -69,8 +68,8 @@ int main()
 
 	if (pset != NULL)
 	{
-		gds_write(L"c:\\LOCAL\\TEST\\test_out.gds", pset, db->dbunit_in_uu, db->dbunit_in_meter);
-		gds_polyset_clear(pset);
+		pset->write(L"c:\\LOCAL\\TEST\\test_out.gds", db->dbunit_in_uu, db->dbunit_in_meter);
+
 		delete pset;
 		pset = NULL;
 	}

@@ -58,12 +58,3 @@ int gds_extract(gds_db* db, const char* cell_name, gds_bbox target, int64_t reso
 	gds_polyset* pset, int64_t* nskipped);
 
 
-/*
-	Write all polygon elements of a polygon set to a GDS file
-
-	All polygons are saved as boundary elements in top cell "TOP"
-
-	@dbunit_size_uu: database size in user units
-	@dbunit_size_in_m: database size in meter
- */
-int gds_write(const wchar_t* dest, gds_polyset* pset, double dbunit_size_uu, double dbunit_size_in_m);

@@ -214,7 +214,7 @@ int gds_write(const wchar_t* dest, gds_polyset* pset, double dbunit_size_uu, dou
 	append_byte(fp, BGNSTR, zeros, 24);
 	append_string(fp, STRNAME, "TOP");
 
-	for (gds_polygon* poly : *pset)
+	for (gds_polygon* poly : *pset->get())
 	{
 		append_boundary(fp, poly->pairs, poly->npairs, poly->layer);
 	}

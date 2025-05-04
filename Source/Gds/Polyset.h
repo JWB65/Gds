@@ -7,7 +7,7 @@
 
 #include <vector>
 
-class gds_polygon {
+class gds_polygon{
 public:
 
 	// The constructor requires an already memory allocated array of type gds_pair
@@ -24,14 +24,32 @@ public:
 	gds_bbox bbox; // Bounding box of the polygon
 };
 
-typedef std::vector<gds_polygon*> gds_polyset;
+class gds_polyset{
+public:
+	gds_polyset();
 
+	~gds_polyset();
 
-void gds_polyset_clear(gds_polyset* pset);
+	void print();
 
-void gds_print_polyset(gds_polyset* pset);
+	/*
+	Write all polygon elements to a GDS file
 
-/*
-	Print to stdout all polygons elements of a polygon set
- */
-void gds_print_polyset(gds_polyset* pset);
+	All polygons are saved as boundary elements in top cell "TOP"
+
+	@dbunit_size_uu: database size in user units
+	@dbunit_size_in_m: database size in meter
+	*/
+	int write(const wchar_t* dest, double dbunit_size_uu, double dbunit_size_in_m);
+
+	void add(gds_polygon* p);
+
+	size_t size();
+
+	void clear();
+
+	std::vector<gds_polygon*>* get() { return set; }
+
+private:
+	std::vector<gds_polygon*>* set;
+};

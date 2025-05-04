@@ -23,26 +23,26 @@ gds_cell::gds_cell()
 gds_cell::~gds_cell()
 {
 	for (gds_sref* sref : *srefs) {
-		free(sref);
+		delete sref;
 	}
 	delete srefs;
 
 	for (gds_aref* aref : *arefs) {
-		free(aref);
+		delete aref;
 	}
 	delete arefs;
 
 	for (gds_boundary* elem : *boundaries) {
-		free(elem->pairs);
-		free(elem);
+		delete elem->pairs;
+		delete elem;
 	}
 	delete boundaries;
 
 	for (gds_path* elem : *paths) {
 		//gds_path* elem = (gds_path*) cell->paths[j];
-		free(elem->pairs);
-		free(elem->epairs);
-		free(elem);
+		delete elem->pairs;
+		delete elem->epairs;
+		delete elem;
 	}
 	delete paths;
 }
