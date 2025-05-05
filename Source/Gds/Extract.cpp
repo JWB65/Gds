@@ -36,7 +36,7 @@ void add_poly(gds_polyset* pset, gds_pair* pairs, int npairs, uint16_t layer, gd
 static
 void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int level)
 {
-	for (gds_boundary* b : *cell->boundaries)
+	for (auto&& b : cell->boundaries)
 	{
 		gds_bbox b_bbox = bbox_transform(&b->bbox, &transform, false);
 
@@ -52,7 +52,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 				info->nskipped++;
 			} else
 			{
-				add_poly(info->pset, b->pairs, b->npairs, b->layer, &b_bbox, &transform);
+				add_poly(info->pset, &b->pairs[0], (int)b->pairs.size(), b->layer, &b_bbox, &transform);
 			}
 
 			// Check if the number of polygons is overflowing
@@ -64,7 +64,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 		}
 	}
 
-	for (gds_path* p : *cell->paths)
+	for (auto&& p : cell->paths)
 	{
 		//gds_path* p = (gds_path*)cell->paths[i];
 		gds_bbox bbox = bbox_transform(&p->bbox, &transform, false);
@@ -81,7 +81,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 				info->nskipped++;
 			} else
 			{
-				add_poly(info->pset, p->pairs, p->npairs, p->layer, &bbox, &transform);
+				add_poly(info->pset, &p->epairs[0], (int) p->epairs.size(), p->layer, &bbox, &transform);
 			}
 
 			// Check if the number of polygons is overflowing
@@ -94,7 +94,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 	}
 
 	// Scan through the SREF elements
-	for (gds_sref* sref : *cell->srefs)
+	for (auto&& sref : cell->srefs)
 	{
 		gds_transform acc;
 		acc.translation = transform_pair(sref->origin, &transform, false);
@@ -103,7 +103,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 		acc.mirror = transform.mirror ^ (sref->strans & 0x8000);
 
 		// Transform the bounding box of the SREF element
-		gds_bbox sref_box = bbox_transform(&sref->cell->bbox, &acc, false);
+		gds_bbox sref_box = bbox_transform(&sref->cell->bbox.value(), &acc, false);
 
 		// Recurse further only if the sref bounding overlaps with the target bounding box
 		if (bbox_check_overlap(&sref_box, &info->target))
@@ -116,7 +116,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 	}
 
 	// Scan through the AREF elements
-	for (gds_aref* aref : *cell->arefs)
+	for (auto&& aref : cell->arefs)
 	{
 		double v_col_x, v_col_y, v_row_x, v_row_y;
 
@@ -152,7 +152,7 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 				acc.mirror = transform.mirror ^ (aref->strans & 0x8000);
 
 				// Transform the bounding box of the aref element
-				gds_bbox aref_box = bbox_transform(&aref->cell->bbox, &acc, false);
+				gds_bbox aref_box = bbox_transform(&aref->cell->bbox.value(), &acc, false);
 
 				// Recurse further only if the aref bounding overlaps with the target bounding box
 				if (bbox_check_overlap(&aref_box, &info->target))

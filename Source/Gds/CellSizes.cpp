@@ -6,8 +6,8 @@
 static gds_bbox
 cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 {
-	if (cell->initialized)
-		return bbox_transform(&cell->bbox, &transform, false);
+	if (cell->bbox.has_value())
+		return bbox_transform(&cell->bbox.value(), &transform, false);
 
 	// We start with an empty bounding box at the origin and start filling it recursively with all
 	// boundary elements, paths, and reference cells
@@ -16,11 +16,11 @@ cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 	bbox_init(&bbox_cell);
 	bbox_fit_point(&bbox_cell, {0, 0});
 
-	for (gds_boundary* b : *cell->boundaries) {
+	for (auto&& b : cell->boundaries) {
 		bbox_fit_bbox(&bbox_cell, &b->bbox);
 	}
 
-	for (gds_path* p : *cell->paths) {
+	for (auto&& p : cell->paths) {
 		bbox_fit_bbox(&bbox_cell, &p->bbox);
 	}
 
@@ -28,7 +28,7 @@ cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 	bbox_transform(&bbox_cell, &transform, false);
 
 	// Update the bounding box to fit all gds_sref elements
-	for (gds_sref* sref : *cell->srefs) {
+	for (auto&& sref : cell->srefs) {
 
 		gds_transform acc;
 		acc.translation = transform_pair(sref->origin, &transform, false);
@@ -42,7 +42,7 @@ cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 		bbox_fit_bbox(&bbox_cell, &tmp); // adjust the bounding box
 	}
 
-	for (gds_aref* aref : *cell->arefs) {
+	for (auto&& aref : cell->arefs) {
 
 		double v_col_x, v_col_y, v_row_x, v_row_y;
 
@@ -85,7 +85,6 @@ cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 
 	// Find and store the bounding box of the structure without transformation (by doing the inverse) 
 	cell->bbox = bbox_transform(&bbox_cell, &transform, true);
-	cell->initialized = true;
 
 	return bbox_cell;
 }
@@ -96,8 +95,7 @@ void gds_cell_sizes(gds_db* db)
 
 	printf("\nAll cells in database with width and height in database units:\n");
 
-	for (int i = 0; i < db->cell_list.size(); i++) {
-		gds_cell* cell = db->cell_list[i];
+	for (auto &&cell : db->cell_list) {
 
 		gds_transform transform;
 		transform.translation = {0, 0};
@@ -105,7 +103,7 @@ void gds_cell_sizes(gds_db* db)
 		transform.angle = 0.f;
 		transform.mirror = 0x0000;
 
-		gds_bbox box = cell_sizes_recurse(cell, transform, 0);
+		gds_bbox box = cell_sizes_recurse(cell.get(), transform, 0);
 
 		printf("%s: %lld by %lld\n", cell->name, box.xmax - box.ymin, box.ymax - box.ymin);
 	}

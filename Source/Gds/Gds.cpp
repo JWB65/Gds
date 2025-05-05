@@ -35,15 +35,15 @@ double buffer_to_double(unsigned char* p)
 
 	sign = 1;
 	exp = 0;
-	if (p[0] > 127) {
+	if (p[0] > 127){
 		sign = -1;
 		exp = p[0] - 192;
-	} else {
+	} else{
 		exp = p[0] - 64;
 	}
 
 	fraction = 0.0;
-	for (i = 0; i < 7; ++i) {
+	for (i = 0; i < 7; ++i){
 		fraction += p[i + 1] / (double)div[i];
 	}
 
@@ -53,7 +53,7 @@ double buffer_to_double(unsigned char* p)
 static
 void swap_big_endian(uint64_t* buf, uint64_t n)
 {
-	while (n > 0) {
+	while (n > 0){
 		uint64_t b = *buf;
 		*buf++ = (b << 56) | ((b & 0x000000000000FF00) << 40) |
 			((b & 0x0000000000FF0000) << 24) | ((b & 0x00000000FF000000) << 8) |
@@ -77,7 +77,7 @@ void double_to_buffer(double value, uint8_t* buf)
 	// The first byte with sign and exponent SEEEEEEE
 
 	uint8_t left_byte = 0;
-	if (value < 0) {
+	if (value < 0){
 		left_byte = 0x80;
 		value = -value;
 	}
@@ -89,7 +89,7 @@ void double_to_buffer(double value, uint8_t* buf)
 
 	const uint64_t mantissa = (uint64_t)(value * pow(16, 14 - exponent));
 
-	union {
+	union{
 		uint8_t a[8];
 		uint64_t b;
 	} tmp = {0};
@@ -98,7 +98,7 @@ void double_to_buffer(double value, uint8_t* buf)
 
 	swap_big_endian(&tmp.b, 8);
 
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 8; i++){
 		buf[i] = tmp.a[i];
 	}
 }
@@ -111,15 +111,19 @@ int read_cells(gds_db* db, const wchar_t* file)
 	if (!fp)
 		return GDS_ERR_FILE_OPEN;
 
-	enum ElemType { EL_NONE = 0, EL_BOUNDARY, EL_PATH, EL_SREF, EL_AREF, EL_TEXT, EL_NODE, EL_BOX };
+	enum ElemType{ EL_NONE = 0, EL_BOUNDARY, EL_PATH, EL_SREF, EL_AREF, EL_TEXT, EL_NODE, EL_BOX };
 
 	// We keep track of path warnings given to avoid repeat
 	bool pathtype1_warning_given = false;
 	bool pathtype4_warning_given = false;
 
-	// Pointers to the active cell (cell being read) and active element (element being read)
-	gds_cell* active_cell = NULL;
-	void* active_elem = NULL;
+	// Pointers to the active cell and possible active elements)
+	std::unique_ptr<gds_cell> active_cell = NULL;
+
+	std::unique_ptr<gds_boundary> active_boundary = NULL;
+	std::unique_ptr<gds_path> active_path = NULL;
+	std::unique_ptr<gds_sref> active_sref = NULL;
+	std::unique_ptr<gds_aref> active_aref = NULL;
 
 	// Variable to track the type of element currently being read
 	enum ElemType curElem = EL_NONE;
@@ -130,7 +134,7 @@ int read_cells(gds_db* db, const wchar_t* file)
 	uint64_t bytes_read = 0; // Number of bytes read from file
 	uint8_t header[4];
 
-	while (endlib == false && fread(header, 1, 4, fp) == 4) {
+	while (endlib == false && fread(header, 1, 4, fp) == 4){
 		uint16_t buf_size, record_len, record_type;
 
 		bytes_read += 4;
@@ -147,13 +151,13 @@ int read_cells(gds_db* db, const wchar_t* file)
 
 		// Read the data (buf_size == 0 means a zero payload record)
 		unsigned char* buf = NULL;
-		if (buf_size > 0) {
+		if (buf_size > 0){
 			buf = (unsigned char*)malloc(buf_size * sizeof(*buf));
 			bytes_read += fread(buf, 1, buf_size, fp);
 		}
 
 		// Handle the different GDS records
-		switch (record_type) {
+		switch (record_type){
 			case HEADER:
 			{
 				db->version = buf[0] << 8 | buf[1];
@@ -174,21 +178,20 @@ int read_cells(gds_db* db, const wchar_t* file)
 				if (active_cell != NULL)
 					return GDS_ERR_ILLEGAL_BGNSTR;
 
-				active_cell = new gds_cell;
+				active_cell = std::make_unique<gds_cell>();
 
 				// Ensure the pointer to the cell is registered already so no memory leaks when
 				// an error is found
-				db->cell_list.push_back(active_cell);
 
 				break;
 			}
 			case ENDSTR:
 			{
 				// Needs to have a prior BGNSTR
-				if (active_cell == NULL)
+				if (active_cell.get() == NULL)
 					return GDS_ERR_ILLEGAL_ENDSTR;
 
-				active_cell = NULL;
+				db->cell_list.push_back(std::move(active_cell));
 
 				break;
 			}
@@ -214,12 +217,10 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case BOUNDARY:
 			{
-				if (active_elem != NULL || active_cell == NULL)
+				if (curElem != EL_NONE || active_cell == NULL)
 					return GDS_ERR_ILLEGAL_BOUNDARY;
 
-				active_elem = calloc(1, sizeof(gds_boundary));
-
-				active_cell->boundaries->push_back((gds_boundary*)active_elem);
+				active_boundary = std::make_unique<gds_boundary>();
 
 				curElem = EL_BOUNDARY;
 
@@ -227,12 +228,10 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case PATH:
 			{
-				if (active_elem != NULL || active_cell == NULL)
+				if (curElem != EL_NONE || active_cell == NULL)
 					return GDS_ERR_ILLEGAL_PATH;
 
-				active_elem = calloc(1, sizeof(gds_path));
-
-				active_cell->paths->push_back((gds_path*)active_elem);
+				active_path = std::make_unique<gds_path>();;
 
 				curElem = EL_PATH;
 
@@ -240,14 +239,12 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case SREF:
 			{
-				if (active_elem != NULL || active_cell == NULL)
+				if (curElem != EL_NONE || active_cell == NULL)
 					return GDS_ERR_ILLEGAL_SREF;
 
-				active_elem = calloc(1, sizeof(gds_sref));
+				active_sref = std::make_unique<gds_sref>();;
 
-				active_cell->srefs->push_back((gds_sref*)active_elem);
-
-				gds_sref* tmp = (gds_sref*)active_elem;
+				gds_sref* tmp = active_sref.get();
 				tmp->mag = 1.0f;
 
 				curElem = EL_SREF;
@@ -256,14 +253,12 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case AREF:
 			{
-				if (active_elem != NULL || active_cell == NULL)
+				if (curElem != EL_NONE || active_cell == NULL)
 					return GDS_ERR_ILLEGAL_AREF;
 
-				active_elem = calloc(1, sizeof(gds_aref));
+				active_aref = std::make_unique<gds_aref>();;
 
-				active_cell->arefs->push_back((gds_aref*)active_elem);
-
-				gds_aref* tmp = (gds_aref*)active_elem;
+				gds_aref* tmp = active_aref.get();
 				tmp->mag = 1.0f;
 
 				curElem = EL_AREF;
@@ -284,40 +279,54 @@ int read_cells(gds_db* db, const wchar_t* file)
 				if (active_cell == NULL)
 					return GDS_ERR_ILLEGAL_ENDEL;
 
-				switch (curElem) {
+				switch (curElem){
 					case EL_BOUNDARY:
 					{
 						// Calculate the boundary box
-						gds_boundary* b = (gds_boundary*)active_elem;
+						gds_boundary* b = active_boundary.get();
 						bbox_init(&b->bbox);
-						bbox_fit_points(&b->bbox, b->pairs, b->npairs);
+						bbox_fit_points(&b->bbox, &b->pairs[0], (int)b->pairs.size());
+
+						active_cell->boundaries.push_back(std::move(active_boundary));
 
 						break;
 					}
 					case EL_PATH:
 					{
-						// For a path element we calculate the associated expanded polygon and its
-						// boundary box
+						// Expand the path
 
-						gds_path* p = (gds_path*)active_elem;
+						gds_path* p = active_path.get();
 
-						p->nepairs = 2 * p->npairs + 1;
-						p->epairs = (gds_pair*)malloc(p->nepairs * sizeof(gds_pair));
+						// Resize the extended pairs element of peth
+						p->epairs.resize(2 * p->pairs.size() + 1);
 
-						int result = gds_expand_path(p->epairs, p->pairs, p->npairs, p->width,
-							p->pathtype);
+						int result = gds_expand_path(&p->epairs[0], &p->pairs[0], (int)p->pairs.size(),
+							p->width, p->pathtype);
 
 						if (result == EXIT_FAILURE)
 							return GDS_ERR_PATH_EXPANSION;
 
 						bbox_init(&p->bbox);
-						bbox_fit_points(&p->bbox, p->epairs, p->nepairs);
+						bbox_fit_points(&p->bbox, &p->epairs[0], p->epairs.size());
+
+						active_cell->paths.push_back(std::move(active_path));
+
+						break;
+					}
+					case EL_SREF:
+					{
+						active_cell->srefs.push_back(std::move(active_sref));
+
+						break;
+					}
+					case EL_AREF:
+					{
+						active_cell->arefs.push_back(std::move(active_aref));
 
 						break;
 					}
 				}
 
-				active_elem = NULL;
 				curElem = EL_NONE;
 
 				break;
@@ -327,17 +336,23 @@ int read_cells(gds_db* db, const wchar_t* file)
 				if (active_cell == NULL || buf_size > GDS_MAX_CELL_NAME)
 					return GDS_ERR_ILLEGAL_STRNAME;
 
-				switch (curElem) {
+				switch (curElem){
 					case EL_SREF:
 					{
-						strncpy(((gds_sref*)active_elem)->sname, (char*)buf, buf_size);
-						((gds_sref*)active_elem)->sname[buf_size] = '\0';
+						if (active_sref.get() == NULL)
+							return GDS_ERR_ILLEGAL_STRNAME;
+
+						strncpy(active_sref.get()->sname, (char*)buf, buf_size);
+						active_sref.get()->sname[buf_size] = '\0';
 						break;
 					}
 					case EL_AREF:
 					{
-						strncpy(((gds_aref*)active_elem)->sname, (char*)buf, buf_size);
-						((gds_aref*)active_elem)->sname[buf_size] = '\0';
+						if (active_aref.get() == NULL)
+							return GDS_ERR_ILLEGAL_STRNAME;
+
+						strncpy(active_aref.get()->sname, (char*)buf, buf_size);
+						active_aref.get()->sname[buf_size] = '\0';
 						break;
 					}
 					default:
@@ -348,35 +363,33 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case COLROW: // AREF
 			{
-				if (curElem != EL_AREF)
+				if (curElem != EL_AREF || active_aref.get() == NULL)
 					return GDS_ERR_ILLEGAL_COLROW;
 
-				((gds_aref*)active_elem)->ncols = buf[0] << 8 | buf[1];
-				((gds_aref*)active_elem)->nrows = buf[2] << 8 | buf[3];
+				active_aref.get()->ncols = buf[0] << 8 | buf[1];
+				active_aref.get()->nrows = buf[2] << 8 | buf[3];
 
 				break;
 			}
 			case PATHTYPE:
 			{
-				if (curElem != EL_PATH)
+				if (curElem != EL_PATH || active_path.get() == NULL)
 					return GDS_ERR_ILLEGAL_PATHTYPE;
 
-				gds_path* path = (gds_path*)active_elem;
-
-				path->pathtype = buf[0] << 8 | buf[1];
+				active_path.get()->pathtype = buf[0] << 8 | buf[1];
 
 				// Only path types 0 and 2 are supported. Type 1 and 4 are converted to type 2 with
 				// a warning.
 
-				if (!pathtype1_warning_given && path->pathtype == 1) {
+				if (!pathtype1_warning_given && active_path.get()->pathtype == 1){
 					printf("WARNING: path type 1 (round ended) will be converted to type 2\n");
-					path->pathtype = 2;
+					active_path.get()->pathtype = 2;
 					pathtype1_warning_given = true;
 				}
 
-				if (!pathtype4_warning_given && ((gds_path*)active_elem)->pathtype == 4) {
+				if (!pathtype4_warning_given && active_path.get()->pathtype == 4){
 					printf("WARNING: path type 4 (var length) will be converted to type 2\n");
-					path->pathtype = 2;
+					active_path.get()->pathtype = 2;
 					pathtype4_warning_given = true;
 				}
 
@@ -384,27 +397,27 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case STRANS: // SREF, AREF, TEXT
 			{
-				switch (curElem) {
+				switch (curElem){
 					case EL_SREF:
-						((gds_sref*)active_elem)->strans = buf[0] << 8 | buf[1];
+						active_sref.get()->strans = buf[0] << 8 | buf[1];
 						break;
 					case EL_AREF:
-						((gds_aref*)active_elem)->strans = buf[0] << 8 | buf[1];
+						active_aref.get()->strans = buf[0] << 8 | buf[1];
 						break;
 				}
 				break;
 			}
 			case ANGLE: // SREF, AREF, TEXT
 			{
-				switch (curElem) {
+				switch (curElem){
 					case EL_SREF:
 					{
-						((gds_sref*)active_elem)->angle = (float)(M_PI * buffer_to_double(buf) / 180.0);
+						active_sref.get()->angle = (float)(M_PI * buffer_to_double(buf) / 180.0);
 						break;
 					}
 					case EL_AREF:
 					{
-						((gds_aref*)active_elem)->angle = (float)(M_PI * buffer_to_double(buf) / 180.0);
+						active_aref.get()->angle = (float)(M_PI * buffer_to_double(buf) / 180.0);
 						break;
 					}
 				}
@@ -412,12 +425,12 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case MAG: // SREF, AREF, TEXT
 			{
-				switch (curElem) {
+				switch (curElem){
 					case EL_SREF:
-						((gds_sref*)active_elem)->mag = (float)buffer_to_double(buf);
+						active_sref.get()->mag = (float)buffer_to_double(buf);
 						break;
 					case EL_AREF:
-						((gds_aref*)active_elem)->mag = (float)buffer_to_double(buf);
+						active_aref.get()->mag = (float)buffer_to_double(buf);
 						break;
 				}
 				break;
@@ -427,17 +440,15 @@ int read_cells(gds_db* db, const wchar_t* file)
 				// Number of pairs
 				int count = buf_size / 8;
 
-				switch (curElem) {
+				switch (curElem){
 					case EL_BOUNDARY:
 					{
-						((gds_boundary*)active_elem)->pairs = (gds_pair*)malloc(count * sizeof(gds_pair));
-						((gds_boundary*)active_elem)->npairs = count;
+						active_boundary->pairs.resize(count);
 						break;
 					}
 					case EL_PATH:
 					{
-						((gds_path*)active_elem)->pairs = (gds_pair*)malloc(count * sizeof(gds_pair));
-						((gds_path*)active_elem)->npairs = count;
+						active_path->pairs.resize(count);
 						break;
 					}
 					case EL_SREF:
@@ -448,24 +459,24 @@ int read_cells(gds_db* db, const wchar_t* file)
 						break;
 				}
 
-				for (int n = 0; n < count; n++) {
+				for (int n = 0; n < count; n++){
 					int i = 8 * n;
 
 					int x = buf[i] << 24 | buf[i + 1] << 16 | buf[i + 2] << 8 | buf[i + 3];
 					int y = buf[i + 4] << 24 | buf[i + 5] << 16 | buf[i + 6] << 8 | buf[i + 7];
 
-					switch (curElem) {
+					switch (curElem){
 						case EL_BOUNDARY:
-							((gds_boundary*)active_elem)->pairs[n] = {x, y};
+							active_boundary->pairs[n] = {x, y};
 							break;
 						case EL_PATH:
-							((gds_path*)active_elem)->pairs[n] = {x, y};
+							active_path->pairs[n] = {x, y};
 							break;
 						case EL_SREF:
-							((gds_sref*)active_elem)->origin = {x, y};
+							active_sref->origin = {x, y};
 							break;
 						case EL_AREF:
-							((gds_aref*)active_elem)->vectors[n] = {x, y};
+							active_aref->vectors[n] = {x, y};
 							break;
 					}
 				}
@@ -473,19 +484,19 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case LAYER: // BOUNDARY, PATH, TEXT, NODE, BOX
 			{
-				switch (curElem) {
+				switch (curElem){
 					case EL_BOUNDARY:
-						((gds_boundary*)active_elem)->layer = buf[0] << 8 | buf[1];
+						active_boundary->layer = buf[0] << 8 | buf[1];
 						break;
 					case EL_PATH:
-						((gds_path*)active_elem)->layer = buf[0] << 8 | buf[1];
+						active_path->layer = buf[0] << 8 | buf[1];
 						break;
 				}
 				break;
 			}
 			case WIDTH: // PATH, TEXT
 				if (curElem == EL_PATH)
-					((gds_path*)active_elem)->width = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
+					active_path->width = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
 				break;
 			case DATATYPE:
 				break;
@@ -532,10 +543,10 @@ int read_cells(gds_db* db, const wchar_t* file)
 	// Make sure all referenced cell names exist and assign cell pointers
 	//
 
-	for (gds_cell* cell : db->cell_list) {
+	for (auto&& cell : db->cell_list){
 		//gds_cell* cell = db->cell_list[i];
 
-		for (gds_sref* sref : *cell->srefs) {
+		for (auto&& sref : cell->srefs){
 			// Continue if this reference already has the cell pointer determined
 			if (sref->cell != NULL)
 				continue;
@@ -546,7 +557,7 @@ int read_cells(gds_db* db, const wchar_t* file)
 				return GDS_ERR_CELL_NAME_NOT_FOUND;
 		}
 
-		for (gds_aref* aref : *cell->arefs) {
+		for (auto&& aref : cell->arefs){
 
 			// Continue if this reference already has the cell pointer determined
 			if (aref->cell)
@@ -565,7 +576,7 @@ int read_cells(gds_db* db, const wchar_t* file)
 
 gds_db::gds_db()
 {
-	int a {};
+	int a{};
 }
 
 int gds_db::read(const wchar_t* file)
@@ -580,8 +591,5 @@ int gds_db::read(const wchar_t* file)
 
 gds_db::~gds_db()
 {
-	for (gds_cell* cell : cell_list) {
-		delete cell;
-		cell = NULL;
-	}
+
 }

@@ -19,7 +19,7 @@ public:
 	// The contents of the gds UNIT records
 	double dbunit_in_uu{}, dbunit_in_meter{};
 
-	std::vector<gds_cell*> cell_list;
+	std::vector<std::unique_ptr<gds_cell>> cell_list;
 
 	gds_db();
 	~gds_db();
