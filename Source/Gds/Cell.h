@@ -59,10 +59,6 @@ struct gds_aref
 
 struct gds_cell
 {
-public:
-	gds_cell();
-	~gds_cell();
-
 	char name[GDS_MAX_CELL_NAME + 1];
 
 	std::vector<std::unique_ptr<gds_boundary>> boundaries;
