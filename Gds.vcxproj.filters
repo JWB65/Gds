@@ -18,12 +18,6 @@
     <ClCompile Include="Source\Gds\BBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Gds\Cell.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Gds\CellSizes.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Gds\ExpandPath.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,12 +42,12 @@
     <ClCompile Include="Source\Test\Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Gds\CellSizes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Gds\BBox.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Gds\Cell.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Gds\Errors.h">
@@ -72,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Gds\Transform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Gds\Cell.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

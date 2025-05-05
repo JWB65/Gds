@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Gds\BBox.cpp" />
-    <ClCompile Include="Source\Gds\Cell.cpp" />
     <ClCompile Include="Source\Gds\CellSizes.cpp" />
     <ClCompile Include="Source\Gds\ExpandPath.cpp" />
     <ClCompile Include="Source\Gds\Extract.cpp" />
