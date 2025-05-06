@@ -19,7 +19,8 @@ public:
 	// The contents of the gds UNIT records
 	double dbunit_in_uu{}, dbunit_in_meter{};
 
-	std::vector<std::unique_ptr<gds_cell>> cell_list;
+	//std::vector<std::unique_ptr<gds_cell>> cell_list;
+	std::vector<gds_cell> cell_list;
 
 	gds_db();
 	~gds_db();
@@ -54,7 +55,7 @@ gds_cell* find_cell(gds_db* db, const char* name);
 	@pset: pointer to list of polygons
 	@return: error code (in case of error)
  */
-int gds_extract(gds_db* db, const char* cell_name, gds_bbox target, int64_t resolution,
-	gds_polyset* pset, int64_t* nskipped);
+std::tuple<int, int64_t> gds_extract(gds_db* db, const char* cell_name, gds_bbox target, int64_t resolution,
+	gds_polyset* pset);
 
 
