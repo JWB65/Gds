@@ -13,7 +13,7 @@ gds_bbox::gds_bbox()
 {
 }
 
-gds_bbox::gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax)
+gds_bbox::gds_bbox(int64_t xmin, int64_t ymin, int64_t xmax, int64_t ymax)
 	: xmin(xmin), ymin(ymin), xmax(xmax), ymax(ymax)
 {
 }
