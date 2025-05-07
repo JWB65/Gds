@@ -11,8 +11,6 @@ public:
 
 	gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax);
 
-	gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax, double um_per_dbu);
-
 	uint64_t size();
 
 	void fit_point(gds_pair p);

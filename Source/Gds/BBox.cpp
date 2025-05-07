@@ -16,15 +16,6 @@ gds_bbox::gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax)
 {
 }
 
-gds_bbox::gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax, double um_per_dbu)
-	:
-	xmin((int64_t) (xmin / um_per_dbu)),
-	ymin((int64_t) (ymin / um_per_dbu)),
-	xmax((int64_t) (xmax / um_per_dbu)),
-	ymax((int64_t) (ymax / um_per_dbu))
-{
-}
-
 uint64_t gds_bbox::size()
 {
 	return min(xmax - xmin, ymax - ymin);
