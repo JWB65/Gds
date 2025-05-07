@@ -23,5 +23,10 @@ public:
 
 	gds_bbox transform(const gds_transform& transform, bool inv) const;
 
+	uint64_t width() const;
+
+	uint64_t height() const;
+
+private:
 	int64_t xmin, ymin, xmax, ymax;
 };

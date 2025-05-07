@@ -1,5 +1,7 @@
 #include "BBox.h"
 
+#include <stdio.h>
+
 inline static
 int64_t min(int64_t const x, int64_t const y)
 {
@@ -78,4 +80,14 @@ gds_bbox gds_bbox::transform(const gds_transform& transform, bool inv) const
 	out.fit_points(tpairs, 4);
 
 	return out;
+}
+
+uint64_t gds_bbox::width() const
+{
+	return xmax - xmin;
+}
+
+uint64_t gds_bbox::height() const
+{
+	return ymax - ymin;
 }

@@ -105,6 +105,6 @@ void gds_cell_sizes(gds_db* db)
 
 		gds_bbox box = cell_sizes_recurse(&cell, transform, 0);
 
-		printf("%s: %lld by %lld\n", cell.name, box.xmax - box.ymin, box.ymax - box.ymin);
+		printf("%s: %lld by %lld\n", cell.name, box.width(), box.height());
 	}
 }

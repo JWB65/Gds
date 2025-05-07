@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-/* Line pair standard form ax + by = c */
+// Line pair standard form ax + by = c
 typedef struct {
 	double a, b, c;
 } Line;
@@ -41,10 +41,6 @@ gds_pair project(gds_pair p, Line line)
 	// A' = B  B' = -A  C' = Ay1 - Bx1
 
 	Line normal = {line.b, -line.a, line.a * p.y - line.b * p.x};
-
-	//normal.a = line.b;
-	//normal.b = -line.a;
-	//normal.c = line.a * p.y - line.b * p.x;
 
 	// Intersect the normal through (pair.x, pair.y) with the line
 	return intersect_lines(line, normal);
@@ -85,11 +81,11 @@ int gds_expand_path(gds_pair* out, const gds_pair* in, int npairs_in, uint32_t w
 		  C             C
 	*/
 
-	// The half width to add each side
-	double hwidth = width / 2.0;
-
 	if (npairs_in < 2)
 		return EXIT_FAILURE;
+
+	// The half width to add each side
+	double hwidth = width / 2.0;
 
 	Line* mlines = (Line*)malloc((npairs_in - 1) * sizeof(Line));
 	Line* plines = (Line*)malloc((npairs_in - 1) * sizeof(Line));
