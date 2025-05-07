@@ -7,25 +7,23 @@ static gds_bbox
 cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 {
 	if (cell->bbox.has_value())
-		return bbox_transform(&cell->bbox.value(), &transform, false);
+		return cell->bbox.value().transform(transform, false);
 
 	// We start with an empty bounding box at the origin and start filling it recursively with all
 	// boundary elements, paths, and reference cells
 
-	gds_bbox bbox_cell;
-	bbox_init(&bbox_cell);
-	bbox_fit_point(&bbox_cell, {0, 0});
+	gds_bbox bbox_cell(0, 0, 0, 0);
 
 	for (gds_boundary& b : cell->boundaries) {
-		bbox_fit_bbox(&bbox_cell, &b.bbox);
+		bbox_cell.fit_bbox(b.bbox);
 	}
 
 	for (gds_path& p : cell->paths) {
-		bbox_fit_bbox(&bbox_cell, &p.bbox);
+		bbox_cell.fit_bbox(p.bbox);
 	}
 
 	// Transform the resulting bounding box with the accumulated transformation
-	bbox_transform(&bbox_cell, &transform, false);
+	bbox_cell.transform(transform, false);
 
 	// Update the bounding box to fit all gds_sref elements
 	for (gds_sref& sref : cell->srefs) {
@@ -39,7 +37,8 @@ cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 		// Recurse into the reference cell
 		gds_bbox tmp = cell_sizes_recurse(sref.cell, acc, level + 1);
 
-		bbox_fit_bbox(&bbox_cell, &tmp); // adjust the bounding box
+		// adjust the bounding box
+		bbox_cell.fit_bbox(tmp);
 	}
 
 	for (gds_aref& aref : cell->arefs) {
@@ -78,13 +77,14 @@ cell_sizes_recurse(gds_cell* cell, gds_transform transform, unsigned int level)
 				// Recurse into the reference cell
 				gds_bbox tmp = cell_sizes_recurse(aref.cell, acc, level + 1);
 
-				bbox_fit_bbox(&bbox_cell, &tmp); // adjust the bounding box
+				// adjust the bounding box
+				bbox_cell.fit_bbox(tmp);
 			}
 		}
 	}
 
 	// Find and store the bounding box of the structure without transformation (by doing the inverse) 
-	cell->bbox = bbox_transform(&bbox_cell, &transform, true);
+	cell->bbox = bbox_cell.transform(transform, true);
 
 	return bbox_cell;
 }

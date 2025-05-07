@@ -17,7 +17,7 @@ public:
 	uint16_t version{};
 
 	// The contents of the gds UNIT records
-	double dbunit_in_uu{}, dbunit_in_meter{};
+	double uu_per_dbu{}, m_per_dbu{};
 
 	//std::vector<std::unique_ptr<gds_cell>> cell_list;
 	std::vector<gds_cell> cell_list;

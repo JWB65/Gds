@@ -6,76 +6,85 @@ int64_t min(int64_t const x, int64_t const y)
 	return y < x ? y : x;
 }
 
-void bbox_init(gds_bbox* self)
+gds_bbox::gds_bbox()
+	: xmin(INT64_MAX), ymin(INT64_MAX), xmax(INT64_MIN), ymax(INT64_MIN)
 {
-	*self = {INT32_MAX, INT32_MAX, INT32_MIN, INT32_MIN};
 }
 
-uint64_t bbox_size(const gds_bbox* target)
+gds_bbox::gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax)
+	: xmin(xmin), ymin(ymin), xmax(xmax), ymax(ymax)
 {
-	return min(target->xmax - target->xmin, target->ymax - target->ymin);
 }
 
-void bbox_fit_point(gds_bbox* self, gds_pair p)
+gds_bbox::gds_bbox(uint64_t xmin, uint64_t ymin, uint64_t xmax, uint64_t ymax, double um_per_dbu)
+	:
+	xmin((int64_t) (xmin / um_per_dbu)),
+	ymin((int64_t) (ymin / um_per_dbu)),
+	xmax((int64_t) (xmax / um_per_dbu)),
+	ymax((int64_t) (ymax / um_per_dbu))
 {
-	if (p.x < self->xmin)
-		self->xmin = p.x;
-
-	if (p.x > self->xmax)
-		self->xmax = p.x;
-
-	if (p.y < self->ymin)
-		self->ymin = p.y;
-
-	if (p.y > self->ymax)
-		self->ymax = p.y;
 }
 
-void bbox_fit_points(gds_bbox* self, const gds_pair* pairs, int npairs)
+uint64_t gds_bbox::size()
 {
-	// Adjust the size of a bounding box to fit a array of pairs
+	return min(xmax - xmin, ymax - ymin);
+}
 
-	for (int i = 0; i < npairs; ++i) {
-		bbox_fit_point(self, pairs[i]);
+void gds_bbox::fit_point(gds_pair p)
+{
+	if (p.x < xmin)
+		xmin = p.x;
+
+	if (p.x > xmax)
+		xmax = p.x;
+
+	if (p.y < ymin)
+		ymin = p.y;
+
+	if (p.y > ymax)
+		ymax = p.y;
+}
+
+void gds_bbox::fit_points(const gds_pair* pairs, int npairs)
+{
+	for (int i = 0; i < npairs; ++i){
+		fit_point(pairs[i]);
 	}
 }
 
-void bbox_fit_bbox(gds_bbox* self, const gds_bbox* other)
+void gds_bbox::fit_bbox(const gds_bbox& other)
 {
-	bbox_fit_point(self, {other->xmin, other->ymin});
-	bbox_fit_point(self, {other->xmin, other->ymax});
-	bbox_fit_point(self, {other->xmax, other->ymax});
-	bbox_fit_point(self, {other->xmax, other->ymin});
+	fit_point({other.xmin, other.ymin});
+	fit_point({other.xmin, other.ymax});
+	fit_point({other.xmax, other.ymax});
+	fit_point({other.xmax, other.ymin});
 }
 
-bool bbox_check_overlap(const gds_bbox* b, const gds_bbox* a)
+bool gds_bbox::check_overlap(const gds_bbox& b) const
 {
-	// Check if there's *possible* overlap between two bounding boxes
-
-	bool overlap = (a->xmin < b->xmax) && (a->xmax > b->xmin) && (a->ymax > b->ymin) && (a->ymin <
-		b->ymax);
+	bool overlap = (xmin < b.xmax) && (xmax > b.xmin) && (ymax > b.ymin) && (ymin < b.ymax);
 
 	return overlap;
+
 }
 
-gds_bbox bbox_transform(const gds_bbox* in, const gds_transform* transform, bool inv)
+gds_bbox gds_bbox::transform(const gds_transform& transform, bool inv) const
 {
 	// Return a transformed bounding box
 
 	gds_pair pairs[4];
 	gds_pair tpairs[4];
 
-	pairs[0] = {in->xmin, in->ymin};
-	pairs[1] = {in->xmin, in->ymax};
-	pairs[2] = {in->xmax, in->ymax};
-	pairs[3] = {in->xmax, in->ymin};
+	pairs[0] = {xmin, ymin};
+	pairs[1] = {xmin, ymax};
+	pairs[2] = {xmax, ymax};
+	pairs[3] = {xmax, ymin};
 
-	transform_pairs(tpairs, pairs, 4, transform, inv);
+	transform_pairs(tpairs, pairs, 4, &transform, inv);
 
 	gds_bbox out;
-	bbox_init(&out);
 
-	bbox_fit_points(&out, tpairs, 4);
+	out.fit_points(tpairs, 4);
 
 	return out;
 }

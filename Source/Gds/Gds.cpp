@@ -203,10 +203,10 @@ int read_cells(gds_db* db, const wchar_t* file)
 			}
 			case UNITS:
 			{
-				db->dbunit_in_uu = buffer_to_double(buf);
-				db->dbunit_in_meter = buffer_to_double(buf + 8);
+				db->uu_per_dbu = buffer_to_double(buf);
+				db->m_per_dbu = buffer_to_double(buf + 8);
 
-				if (db->dbunit_in_uu <= 0. || db->dbunit_in_meter <= 0)
+				if (db->uu_per_dbu <= 0. || db->m_per_dbu <= 0)
 					return GDS_ERR_DBU;
 
 				break;
@@ -292,8 +292,7 @@ int read_cells(gds_db* db, const wchar_t* file)
 					{
 						// Calculate the boundary box
 						gds_boundary* b = active_boundary;
-						bbox_init(&b->bbox);
-						bbox_fit_points(&b->bbox, &b->pairs[0], (int)b->pairs.size());
+						b->bbox.fit_points(&b->pairs[0], (int)b->pairs.size());
 
 						break;
 					}
@@ -312,8 +311,7 @@ int read_cells(gds_db* db, const wchar_t* file)
 						if (result == EXIT_FAILURE)
 							return GDS_ERR_PATH_EXPANSION;
 
-						bbox_init(&p->bbox);
-						bbox_fit_points(&p->bbox, &p->epairs[0], p->epairs.size());
+						p->bbox.fit_points(&p->epairs[0], (int)p->epairs.size());
 
 						break;
 					}

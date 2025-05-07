@@ -38,21 +38,20 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 {
 	for (gds_boundary& b : cell->boundaries)
 	{
-		gds_bbox b_bbox = bbox_transform(&b.bbox, &transform, false);
+		gds_bbox bbox = b.bbox.transform(transform, false);
 
-		if (bbox_check_overlap(&b_bbox, &info->target))
-		{
+		if (bbox.check_overlap(info->target)){
 			// The boundary element after transformation overlaps with the target bounding box
 
 			// Check if its size is larger than the minimum (resolution)
-			int64_t box_size = bbox_size(&b_bbox);
+			int64_t box_size = bbox.size();
 
 			if (box_size < info->resolution)
 			{
 				info->nskipped++;
 			} else
 			{
-				add_poly(info->pset, &b.pairs[0], (int)b.pairs.size(), b.layer, &b_bbox,
+				add_poly(info->pset, &b.pairs[0], (int)b.pairs.size(), b.layer, &bbox,
 					&transform);
 			}
 
@@ -68,14 +67,14 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 	for (gds_path& p : cell->paths)
 	{
 		//gds_path* p = (gds_path*)cell->paths[i];
-		gds_bbox bbox = bbox_transform(&p.bbox, &transform, false);
+		gds_bbox bbox = p.bbox.transform(transform, false);
 
-		if (bbox_check_overlap(&bbox, &info->target))
+		if (bbox.check_overlap(info->target))
 		{
 			// The boundary element after transformation overlaps with the target bounding box
 
 			// Check if its size is larger than the minimum (resolution)
-			int64_t box_size = bbox_size(&bbox);
+			int64_t box_size = bbox.size();
 
 			if (box_size < info->resolution)
 			{
@@ -104,10 +103,10 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 		acc.mirror = transform.mirror ^ (sref.strans & 0x8000);
 
 		// Transform the bounding box of the SREF element
-		gds_bbox sref_box = bbox_transform(&sref.cell->bbox.value(), &acc, false);
+		gds_bbox sref_box = sref.cell->bbox.value().transform(acc, false);
 
 		// Recurse further only if the sref bounding overlaps with the target bounding box
-		if (bbox_check_overlap(&sref_box, &info->target))
+		if (sref_box.check_overlap(info->target))
 		{
 			extract(info, sref.cell, acc, level + 1);
 
@@ -153,10 +152,10 @@ void extract(ExtractionInfo* info, gds_cell* cell, gds_transform transform, int 
 				acc.mirror = transform.mirror ^ (aref.strans & 0x8000);
 
 				// Transform the bounding box of the aref element
-				gds_bbox aref_box = bbox_transform(&aref.cell->bbox.value(), &acc, false);
+				gds_bbox aref_box = aref.cell->bbox.value().transform(acc, false);
 
 				// Recurse further only if the aref bounding overlaps with the target bounding box
-				if (bbox_check_overlap(&aref_box, &info->target))
+				if (aref_box.check_overlap(info->target))
 				{
 					extract(info, aref.cell, acc, level + 1);
 
@@ -187,7 +186,7 @@ std::tuple<int, int64_t> gds_extract(gds_db* db, const char* cell_name, gds_bbox
 	info.nskipped = 0;
 	info.error = NULL;
 
-	//double dbunit_in_um = 1E6 * db->dbunit_in_meter;
+	//double dbunit_in_um = 1E6 * db->m_per_dbu;
 
 	// Convert the target box from micron to data base units
 	info.target = target;
